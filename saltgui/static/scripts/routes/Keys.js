@@ -8,6 +8,12 @@ export class KeysRoute extends PageRoute {
   constructor(pRouter) {
     super("^[\/]keys$", "Keys", "#page-keys", "#button-keys", pRouter);
 
+    Utils.showTableSortable(this.getPageElement());
+    Utils.makeTableSearchable(this.getPageElement());
+
+    Utils.addTableHelp(this.getPageElement(),
+      "The content of this page is\nautomatically refreshed.");
+
     this.fingerprintPattern = /^[0-9a-f:]+$/i;
 
     this._handleKeysWheelKeyListAll = this._handleKeysWheelKeyListAll.bind(this);
@@ -26,6 +32,7 @@ export class KeysRoute extends PageRoute {
     const runnerJobsListJobsPromise = this.router.api.getRunnerJobsListJobs();
     const runnerJobsActivePromise = this.router.api.getRunnerJobsActive();
 
+    this.cleanTableAndStatus("minion-list");
     wheelKeyListAllPromise.then(pWheelKeyListAllData => {
       myThis._handleKeysWheelKeyListAll(pWheelKeyListAllData);
       wheelKeyFingerPromise.then(pWheelKeyFingerData => {
@@ -41,6 +48,7 @@ export class KeysRoute extends PageRoute {
       myThis._handleKeysWheelKeyListAll(JSON.stringify(pWheelKeyListAllMsg));
     });
 
+    this.cleanTableAndStatus("job-list");
     runnerJobsListJobsPromise.then(pRunnerJobsListJobsData => {
       myThis.handleRunnerJobsListJobs(pRunnerJobsListJobsData);
       runnerJobsActivePromise.then(pRunnerJobsActiveData => {
