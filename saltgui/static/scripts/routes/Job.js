@@ -119,8 +119,9 @@ export class JobRoute extends Route {
 
     if(!pRunnerJobsListJobData) return;
 
+    output.innerText = "";
+
     if(typeof pRunnerJobsListJobData !== "object") {
-      output.innerText = "";
       Utils.addErrorToTableCell(output, pRunnerJobsListJobData);
       const functionField = this.getPageElement().querySelector(".function");
       functionField.innerText = "ERROR";
@@ -135,10 +136,13 @@ export class JobRoute extends Route {
       functionField.innerText = "ERROR";
       const timeField = this.getPageElement().querySelector(".time");
       timeField.innerText = Output.dateTimeStr(info.StartTime);
-      return;
+      if(info.Error !== "Cannot contact returner or no job with this jid")
+        return;
+      output.innerText += "\n\nMenu options are provided just in case the job is still running";
+      // provide a useful alternative when target is no longer available
+      if(!info.Target) info.Target = "*";
+      // otherwise continue to still get a few menu options
     }
-
-    output.innerText = "";
 
     // use same formatter as direct commands
     const argumentsText = this.decodeArgumentsText(info.Arguments);
@@ -165,6 +169,9 @@ export class JobRoute extends Route {
     this._addMenuItemTerminateJob(menu, info, pJobId);
     this._addMenuItemKillJob(menu, info, pJobId);
     this._addMenuItemSignalJob(menu, info, pJobId);
+
+    // we have added the menu; nothing more on job error
+    if(info.Error) return;
 
     const functionText = commandText + " on " +
       TargetType.makeTargetText(info["Target-type"], info.Target);
@@ -223,6 +230,10 @@ export class JobRoute extends Route {
   }
 
   _addMenuItemJobRerunJob(pMenu, info, commandText) {
+
+    // no info will be available on error
+    if(info.Error) return;
+
     // 2011 = NON-BREAKING HYPHEN
     pMenu.addMenuItem("Re&#x2011;run&nbsp;job...", function(pClickEvent) {
       this.runFullCommand(pClickEvent, info["Target-type"], info.Target, commandText);
