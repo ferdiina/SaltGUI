@@ -97,7 +97,7 @@ export class Panel {
     this.playOrPause = pInitialStatus;
   }
 
-  addHelpButton (pHelpText) {
+  addHelpButton (pHelpTextArr) {
     const span = document.createElement("span");
     span.id = this.key + "-help-button";
     span.classList.add("nearly-visible-button");
@@ -106,7 +106,7 @@ export class Panel {
     span.style.cursor = "help";
     this.div.appendChild(span);
 
-    Utils.addToolTip(span, pHelpText, "bottom-right");
+    Utils.addToolTip(span, pHelpTextArr.join("\n"), "bottom-right");
   }
 
   addCloseButton () {
@@ -241,7 +241,7 @@ export class Panel {
           } else if (fields.length === 2) {
             minions[fields[0]] = fields[1];
           } else {
-            console.warn("lines in 'minions.txt' must have 1 or 2 words, not " + fields.length + " like in: " + line);
+            Utils.warn("lines in 'minions.txt' must have 1 or 2 words, not " + fields.length + " like in: " + line);
           }
         }
         Utils.setStorageItem("session", "minions-txt", JSON.stringify(minions));
@@ -565,6 +565,12 @@ export class Panel {
     if (cntOffline > 0) {
       txt += ", " + Utils.txtZeroOneMany(cntOffline, "none offline", "{0} offline", "{0} offline");
     }
+
+    const cntMinionsPre = Utils.getStorageItem("session", "minions_pre_length");
+    if (cntMinionsPre && cntMinionsPre !== "0") {
+      txt += ", " + Utils.txtZeroOneMany(cntMinionsPre, "", "{0} unaccepted key", "{0} unaccepted keys");
+    }
+
     this.setMsg(txt);
   }
 
@@ -591,8 +597,37 @@ export class Panel {
     minionTr.appendChild(offlineTd);
   }
 
-  runCommand (pClickEvent, pTargetString, pCommandString) {
-    this.runFullCommand(pClickEvent, "", pTargetString, pCommandString);
+  runCommand (pClickEvent, pTargetString, pCommandStringArray) {
+    let commandString = "";
+    let separator = "";
+    for (const cmd of pCommandStringArray) {
+      commandString += separator;
+      separator = " ";
+      if (typeof cmd !== "string") {
+        commandString += JSON.stringify(cmd);
+        continue;
+      }
+      if (cmd.match(/^[a-z_]+=$/)) {
+        // handle key-value pairs
+        const pos = cmd.indexOf("=");
+        commandString += cmd.substr(0, pos + 1);
+        // value comes in a separate element
+        separator = "";
+        continue;
+      }
+      if (cmd.match(/^<[a-z]*>$/)) {
+        // It's a placeholder
+        commandString += cmd;
+        continue;
+      }
+      if (cmd.match(/^[a-z_][a-z0-9_]*(?:[.][a-z0-9_]+)*$/)) {
+        // It's a simple string or a command
+        commandString += cmd;
+        continue;
+      }
+      commandString += JSON.stringify(cmd);
+    }
+    this.runFullCommand(pClickEvent, "", pTargetString, commandString);
   }
 
   runFullCommand (pClickEvent, pTargetType, pTargetString, pCommandString) {

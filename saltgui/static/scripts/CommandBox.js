@@ -113,6 +113,13 @@ export class CommandBox {
     txt += "When a minion has multiple lines of output, it can be collapsed.";
     txt += "</p>";
 
+    txt += "<br/>";
+
+    txt += "<h2>Templates</h2>";
+    txt += "<p>";
+    txt += "The server-side configuration file can define common used values for the target and command fields, or combinations of these. The command menu to use these templates becomes visible on this screen when there is at least one template defined in the configuration file. See README.md for more details.";
+    txt += "</p>";
+
     output.innerHTML = txt;
   }
 
@@ -171,6 +178,37 @@ export class CommandBox {
     }
   }
 
+  static getScreenModifyingCommands () {
+    return {
+      "beacons.add": ["beacons", "beacons-minion"],
+      "beacons.delete": ["beacons", "beacons-minion"],
+      "beacons.disable": ["beacons", "beacons-minion"],
+      "beacons.disable_beacon": ["beacons-minion"],
+      "beacons.enable": ["beacons", "beacons-minion"],
+      "beacons.enable_beacon": ["beacons-minion"],
+      "beacons.modify": ["beacons-minion"],
+      "beacons.reset": ["beacons", "beacons-minion"],
+      "grains.append": ["minions", "grains", "grains-minion"],
+      "grains.delkey": ["minions", "grains", "grains-minion"],
+      "grains.delval": ["minions", "grains", "grains-minion"],
+      "grains.setval": ["minions", "grains", "grains-minion"],
+      "ps.kill_pid": ["job", "jobs"],
+      "saltutil.kill_job": ["job", "jobs"],
+      "saltutil.refresh_grains": ["minions", "grains", "grains-minion"],
+      "saltutil.refresh_pillar": ["pillars", "pillars-minion"],
+      "saltutil.signal_job": ["job", "jobs"],
+      "saltutil.term_job": ["job", "jobs"],
+      "schedule.add": ["schedules", "schedules-minion"],
+      "schedule.delete": ["schedules", "schedules-minion"],
+      "schedule.disable": ["schedules", "schedules-minion"],
+      "schedule.disable_job": ["schedules-minion"],
+      "schedule.enable": ["schedules", "schedules-minion"],
+      "schedule.enable_job": ["schedules-minion"],
+      "schedule.modify": ["schedules", "schedules-minion"],
+      "schedule.run_job": ["*"]
+    };
+  }
+
   _onRun () {
     const button = document.querySelector(".run-command input[type='submit']");
     if (button.disabled) {
@@ -203,34 +241,7 @@ export class CommandBox {
     button.disabled = true;
     output.innerText = "loading...";
 
-    const screenModifyingCommands = {
-      "beacons.add": ["beacons", "beacons-minion"],
-      "beacons.delete": ["beacons", "beacons-minion"],
-      "beacons.disable": ["beacons", "beacons-minion"],
-      "beacons.disable_beacon": ["beacons-minion"],
-      "beacons.enable": ["beacons", "beacons-minion"],
-      "beacons.enable_beacon": ["beacons-minion"],
-      "beacons.modify": ["beacons-minion"],
-      "beacons.reset": ["beacons", "beacons-minion"],
-      "grains.append": ["minions", "grains", "grains-minion"],
-      "grains.delkey": ["minions", "grains", "grains-minion"],
-      "grains.delval": ["minions", "grains", "grains-minion"],
-      "grains.setval": ["minions", "grains", "grains-minion"],
-      "ps.kill_pid": ["job", "jobs"],
-      "saltutil.kill_job": ["job", "jobs"],
-      "saltutil.refresh_grains": ["minions", "grains", "grains-minion"],
-      "saltutil.refresh_pillar": ["pillars", "pillars-minion"],
-      "saltutil.signal_job": ["job", "jobs"],
-      "saltutil.term_job": ["job", "jobs"],
-      "schedule.add": ["schedules", "schedules-minion"],
-      "schedule.delete": ["schedules", "schedules-minion"],
-      "schedule.disable": ["schedules", "schedules-minion"],
-      "schedule.disable_job": ["schedules-minion"],
-      "schedule.enable": ["schedules", "schedules-minion"],
-      "schedule.enable_job": ["schedules-minion"],
-      "schedule.modify": ["schedules", "schedules-minion"],
-      "schedule.run_job": ["*"]
-    };
+    const screenModifyingCommands = CommandBox.getScreenModifyingCommands();
     // test whether the command may have caused an update to the list
     const command = commandValue.split(" ")[0];
     if (command in screenModifyingCommands) {
@@ -357,7 +368,7 @@ export class CommandBox {
   // a KeyEvent(type="keyup")
   static _hideManualRun (pEvent) {
     // Don't close if they click inside the window
-    if (pEvent.type === "click" && pEvent.target.className !== "popup" && pEvent.target.className !== "nearly-visible-button") {
+    if (pEvent.type === "click" && !pEvent.target.classList.contains("popup") && !pEvent.target.classList.contains("nearly-visible-button")) {
       return;
     }
 
@@ -486,7 +497,7 @@ export class CommandBox {
     // {"jid": "20201105221605666661", "id": "ss04", "return": {"no_|-states_|-states_|-None": {"result": false, "comment": "No Top file or master_tops data matches found. Please see master log for details.", "name": "No States", "changes": {}, "__run_num__": 0}}, "retcode": 2, "success": false, "fun": "state.apply", "fun_args": null, "out": "highstate", "_stamp": "2020-11-05T22:16:06.377513"}
     const part = pTag.split("/");
     if (part.length !== 5) {
-      console.info("unkown tag", pTag);
+      Utils.info("unkown tag", pTag);
       return;
     }
 
@@ -532,7 +543,7 @@ export class CommandBox {
     // salt/job/20201105020540728914/prog/ss01/0
     const part = pTag.split("/");
     if (part.length !== 6) {
-      console.info("unkown tag", pTag);
+      Utils.info("unkown tag", pTag);
       return;
     }
 
@@ -550,7 +561,7 @@ export class CommandBox {
     const divId = "run-" + Utils.getIdFromMinionId(eventMinionId);
     const div = document.getElementById(divId);
     if (div === null) {
-      console.log("div=null, minion=" + eventMinionId);
+      Utils.log("div=null, minion=" + eventMinionId);
       return;
     }
 

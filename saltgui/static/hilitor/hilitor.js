@@ -97,10 +97,10 @@ function Hilitor(start, id, tag)
       for(var i=0; i < node.childNodes.length; i++)
         this.hiliteWords(node.childNodes[i]);
     }
-    if(node.nodeType == 3) { // NODE_TEXT
+    if(node.nodeType === 3) { // NODE_TEXT
       // limit the number of highlighted matches to 25 otherwise the DOM grows rediculously
       // and performance drops with it. and it is still a good first indication.
-      let regs;
+      let nv, regs;
       if(this.nrHilites <= 25 && (nv = node.nodeValue) && (regs = matchRegExp.exec(nv)) && regs[0].length > 0) {
         if(!wordColor[regs[0].toLowerCase()]) {
           wordColor[regs[0].toLowerCase()] = colors[colorIdx++ % colors.length];
@@ -138,7 +138,7 @@ function Hilitor(start, id, tag)
   this.apply = function(input, isCaseSensitive=false)
   {
     this.remove();
-    if(input === undefined || !input) return;
+    if(input === undefined || !input) return undefined;
     if(this.setRegex(input, isCaseSensitive)) {
       this.hiliteWords(targetNode);
     }

@@ -21,8 +21,13 @@ export class BeaconsMinionPanel extends Panel {
     this._addPanelMenuItemBeaconsSave();
     this.addSearchButton();
     this.addPlayPauseButton("play");
-    this.addHelpButton("The content of column 'Value' is automatically refreshed\nNote that some beacons produce multiple values, e.g. one per disk\nIn that case, effectively only one of the values is visible here");
     this.addCloseButton();
+    this.addHelpButton([
+      "The content of column 'Value' is automatically refreshed",
+      "The content of column 'Config' is simplified to reduce its formatted size",
+      "Note that some beacons produce multiple values, e.g. one per disk",
+      "In that case, effectively only one of the values is visible here"
+    ]);
     this.addTable(["Name", "-menu-", "Config", "Value", "-help-"]);
     this.setTableSortable("Name", "asc");
     this.setTableClickable();
@@ -44,6 +49,45 @@ export class BeaconsMinionPanel extends Panel {
       this._handleLocalBeaconsList(JSON.stringify(pLocalBeaconsListMsg), minionId);
       return false;
     });
+
+    const beaconsListAvailable = Utils.getStorageItem("session", "beacons_list_available");
+    if (!beaconsListAvailable) {
+      // yes, we want the list from *all* minions
+      const localBeaconsListAvailablePromise = this.api.getLocalBeaconsListAvailable(null);
+
+      localBeaconsListAvailablePromise.then((pLocalBeaconsListAvailableData) => {
+        BeaconsMinionPanel._handleBeaconsListAvailable(pLocalBeaconsListAvailableData);
+        return true;
+      }, (pLocalBeaconsListAvailableMsg) => {
+        // pretend nothing is available
+        Utils.warn("cannot retrieve beacons.list_available:", pLocalBeaconsListAvailableMsg);
+        Utils.setStorageItem("session", "beacons_list_available", "{cnt: 0}");
+        return false;
+      });
+    }
+  }
+
+  static _handleBeaconsListAvailable (pLocalBeaconsListAvailableData) {
+    const allBeacons = {"_cnt": 0, "_offline": 0};
+    const localBeaconsListAvailableData = pLocalBeaconsListAvailableData.return[0];
+    // pretend that there is only one list of known beacons
+    for (const minionId in localBeaconsListAvailableData) {
+      if (typeof localBeaconsListAvailableData[minionId] !== "object") {
+        // unavailable minions result in "false"
+        allBeacons["_offline"] += 1;
+        continue;
+      }
+      allBeacons["_cnt"] += 1;
+      for (const beaconId of localBeaconsListAvailableData[minionId]) {
+        if (beaconId in allBeacons) {
+          allBeacons[beaconId] += 1;
+        } else {
+          allBeacons[beaconId] = 1;
+        }
+      }
+    }
+    const allBeaconsStr = JSON.stringify(allBeacons);
+    Utils.setStorageItem("session", "beacons_list_available", allBeaconsStr);
   }
 
   updateFooter () {
@@ -134,12 +178,12 @@ export class BeaconsMinionPanel extends Panel {
       // run the command with the original beacon definition
       tr.addEventListener("click", (pClickEvent) => {
         const beacon0 = beacons0[beaconName];
-        this.runCommand(pClickEvent, pMinionId, "beacons.modify " + beaconName + " " + JSON.stringify(beacon0));
+        this.runCommand(pClickEvent, pMinionId, ["beacons.modify", beaconName, beacon0]);
       });
 
       const helpButtonTd = Utils.createTd("help-button");
       const helpButtonSpan = Utils.createSpan("nearly-visible-button", "", this.key + "-" + beaconName + "-help-button");
-      helpButtonSpan.innerText = Character.BLACK_QUESTION_MARK_ORNAMENT_MONO;
+      helpButtonSpan.innerText = Character.WARNING_SIGN;
       helpButtonSpan.style.display = "none";
       helpButtonSpan.style.cursor = "help";
       helpButtonTd.appendChild(helpButtonSpan);
@@ -158,7 +202,7 @@ export class BeaconsMinionPanel extends Panel {
       return "Disable beacons...";
     }, (pClickEvent) => {
       const minionId = decodeURIComponent(Utils.getQueryParam("minionid"));
-      this.runCommand(pClickEvent, minionId, "beacons.disable");
+      this.runCommand(pClickEvent, minionId, ["beacons.disable"]);
     });
   }
 
@@ -170,28 +214,28 @@ export class BeaconsMinionPanel extends Panel {
       return "Enable beacons...";
     }, (pClickEvent) => {
       const minionId = decodeURIComponent(Utils.getQueryParam("minionid"));
-      this.runCommand(pClickEvent, minionId, "beacons.enable");
+      this.runCommand(pClickEvent, minionId, ["beacons.enable"]);
     });
   }
 
   _addPanelMenuItemBeaconsAdd () {
     this.panelMenu.addMenuItem("Add beacon...", (pClickEvent) => {
       const minionId = decodeURIComponent(Utils.getQueryParam("minionid"));
-      this.runCommand(pClickEvent, minionId, "beacons.add <name> <data>");
+      this.runCommand(pClickEvent, minionId, ["beacons.add", "<name>", "<data>"]);
     });
   }
 
   _addPanelMenuItemBeaconsReset () {
     this.panelMenu.addMenuItem("Reset beacons...", (pClickEvent) => {
       const minionId = decodeURIComponent(Utils.getQueryParam("minionid"));
-      this.runCommand(pClickEvent, minionId, "beacons.reset");
+      this.runCommand(pClickEvent, minionId, ["beacons.reset"]);
     });
   }
 
   _addPanelMenuItemBeaconsSave () {
     this.panelMenu.addMenuItem("Save beacons...", (pClickEvent) => {
       const minionId = decodeURIComponent(Utils.getQueryParam("minionid"));
-      this.runCommand(pClickEvent, minionId, "beacons.save");
+      this.runCommand(pClickEvent, minionId, ["beacons.save"]);
     });
   }
 
@@ -200,7 +244,7 @@ export class BeaconsMinionPanel extends Panel {
       return;
     }
     pMenu.addMenuItem("Disable beacon...", (pClickEvent) => {
-      this.runCommand(pClickEvent, pMinionId, "beacons.disable_beacon " + key);
+      this.runCommand(pClickEvent, pMinionId, ["beacons.disable_beacon", key]);
     });
   }
 
@@ -209,13 +253,13 @@ export class BeaconsMinionPanel extends Panel {
       return;
     }
     pMenu.addMenuItem("Enable beacon...", (pClickEvent) => {
-      this.runCommand(pClickEvent, pMinionId, "beacons.enable_beacon " + key);
+      this.runCommand(pClickEvent, pMinionId, ["beacons.enable_beacon", key]);
     });
   }
 
   _addMenuItemBeaconsDelete (pMenu, pMinionId, key) {
     pMenu.addMenuItem("Delete beacon...", (pClickEvent) => {
-      this.runCommand(pClickEvent, pMinionId, "beacons.delete " + key);
+      this.runCommand(pClickEvent, pMinionId, ["beacons.delete", key]);
     });
   }
 

@@ -20,10 +20,13 @@ export class KeysPanel extends Panel {
     this._addPanelMenuItemWheelKeyRejectAllUnacceptedAccepted();
     this._addPanelMenuItemWheelKeyRejectAllUnacceptedDenied();
     this._addPanelMenuItemWheelKeyRejectAllUnacceptedAcceptedDenied();
-    this._addPanelMenuItemWheelKeyDeleteAllUnaccepted();
+    this._addPanelMenuItemWheelKeyDeleteAll();
     this.addSearchButton();
     this.addPlayPauseButton("play");
-    this.addHelpButton("The content of this page is\nautomatically refreshed");
+    this.addHelpButton([
+      "The content of this page is",
+      "automatically refreshed"
+    ]);
     this.addTable(["Minion", "Status", "-menu-", "Fingerprint"], "data-list-keys");
     this.setTableSortable("Status", "asc");
     this.addMsg();
@@ -135,8 +138,10 @@ export class KeysPanel extends Panel {
       if (this.table.querySelector("#" + Utils.getIdFromMinionId(minionId))) {
         continue;
       }
-      this._addMissingMinion(minionId);
+      this._addMissingMinion(minionId, minionsDict);
     }
+
+    Utils.setStorageItem("session", "minions_pre_length", allKeys.minions_pre.length);
 
     this.updateFooter();
 
@@ -184,28 +189,61 @@ export class KeysPanel extends Panel {
     this.setMsg(txt, true);
   }
 
-  static _flagUnacceptedMinion (pMinionId, pMinionsDict, pMinionIdSpan, pTxt, pIsBold = false) {
+  static _flagMinion (pMinionId, pMinionTr, pMinionsDict) {
+    let isBold = false;
+    let color = "";
+    let txt = "";
+
     if (!Object.keys(pMinionsDict).length) {
       // list of well-known minion is empty
       // assume we actually don't known
-      return;
-    }
-
-    if (Object.keys(pMinionsDict).includes(pMinionId)) {
+    } else if (Object.keys(pMinionsDict).includes(pMinionId)) {
       // this is a known minion
-      return;
+    } else {
+      const status = pMinionTr.dataset.status;
+      switch (status) {
+      case "accepted":
+        txt = "Unexpected entry\nThis entry may need to be rejected!";
+        color = "red";
+        break;
+      case "rejected":
+        txt = "Unexpected entry\nBut it is already rejected";
+        color = "red";
+        break;
+      case "denied":
+        txt = "Unexpected entry\nBut it is already denied";
+        color = "red";
+        break;
+      case "unaccepted":
+        txt = "Unexpected entry\nDo not accept this entry without proper verification!";
+        color = "red";
+        isBold = true;
+        break;
+      case "missing":
+        txt = "Entry is missing\nIs the host running and is the salt-minion installed and started?";
+        color = "red";
+        break;
+      default:
+        txt = "Unknown status '" + status + "'";
+        color = "red";
+        isBold = true;
+      }
     }
 
-    Utils.addToolTip(
-      pMinionIdSpan,
-      "Unexpected entry\n" + pTxt + "\nUpdate file 'minions.txt' when needed",
-      "bottom-left");
+    const minionIdSpan = pMinionTr.querySelector("td span");
 
-    pMinionIdSpan.style.color = "red";
-
-    if (pIsBold) {
-      pMinionIdSpan.style.fontWeight = "bold";
+    if (txt) {
+      Utils.addToolTip(
+        minionIdSpan,
+        txt + "\nUpdate file 'minions.txt' when needed",
+        "bottom-left");
+    } else {
+      Utils.addToolTip(minionIdSpan, null);
     }
+
+    minionIdSpan.style.color = color;
+
+    minionIdSpan.style.fontWeight = isBold ? "bold" : "";
   }
 
   _addAcceptedMinion (pMinionId, pMinionsDict) {
@@ -214,12 +252,11 @@ export class KeysPanel extends Panel {
     const minionIdTd = Utils.createTd();
     const minionIdSpan = Utils.createSpan("minion-id", pMinionId);
     minionIdTd.appendChild(minionIdSpan);
-    KeysPanel._flagUnacceptedMinion(pMinionId, pMinionsDict, minionIdSpan,
-      "This entry may need to be rejected!");
+    minionTr.dataset.status = "accepted";
     minionTr.appendChild(minionIdTd);
+    KeysPanel._flagMinion(pMinionId, minionTr, pMinionsDict);
 
     const accepted = Utils.createTd("status", "accepted");
-    minionTr.dataset.status = "accepted";
     accepted.setAttribute("sorttable_customkey", 2);
     accepted.classList.add("accepted");
     minionTr.appendChild(accepted);
@@ -238,12 +275,11 @@ export class KeysPanel extends Panel {
     const minionIdTd = Utils.createTd();
     const minionIdSpan = Utils.createSpan("minion-id", pMinionId);
     minionIdTd.appendChild(minionIdSpan);
-    KeysPanel._flagUnacceptedMinion(pMinionId, pMinionsDict, minionIdSpan,
-      "But it is already rejected");
+    minionTr.dataset.status = "rejected";
     minionTr.appendChild(minionIdTd);
+    KeysPanel._flagMinion(pMinionId, minionTr, pMinionsDict);
 
     const rejected = Utils.createTd("status", "rejected");
-    minionTr.dataset.status = "rejected";
     rejected.setAttribute("sorttable_customkey", 4);
     rejected.classList.add("rejected");
     minionTr.appendChild(rejected);
@@ -265,12 +301,11 @@ export class KeysPanel extends Panel {
     const minionIdTd = Utils.createTd();
     const minionIdSpan = Utils.createSpan("minion-id", pMinionId);
     minionIdTd.appendChild(minionIdSpan);
-    KeysPanel._flagUnacceptedMinion(pMinionId, pMinionsDict, minionIdSpan,
-      "But it is already denied");
+    minionTr.dataset.status = "denied";
     minionTr.appendChild(minionIdTd);
+    KeysPanel._flagMinion(pMinionId, minionTr, pMinionsDict);
 
     const denied = Utils.createTd("status", "denied");
-    minionTr.dataset.status = "denied";
     denied.setAttribute("sorttable_customkey", 3);
     denied.classList.add("denied");
     minionTr.appendChild(denied);
@@ -292,12 +327,11 @@ export class KeysPanel extends Panel {
     const minionIdTd = Utils.createTd();
     const minionIdSpan = Utils.createSpan("minion-id", pMinionId);
     minionIdTd.appendChild(minionIdSpan);
-    KeysPanel._flagUnacceptedMinion(pMinionId, pMinionsDict, minionIdSpan,
-      "Do not accept this entry without proper verification!", true);
+    minionTr.dataset.status = "unaccepted";
     minionTr.appendChild(minionIdTd);
+    KeysPanel._flagMinion(pMinionId, minionTr, pMinionsDict);
 
     const pre = Utils.createTd("status", "unaccepted");
-    minionTr.dataset.status = "unaccepted";
     // unaccepted comes first because user action is needed
     // all others have the same order as in 'salt-key'
     pre.setAttribute("sorttable_customkey", 1);
@@ -321,18 +355,17 @@ export class KeysPanel extends Panel {
     }
   }
 
-  _addMissingMinion (pMinionId) {
+  _addMissingMinion (pMinionId, pMinionsDict) {
     const minionTr = this.getElement(Utils.getIdFromMinionId(pMinionId), "UNKNOWN");
 
     const minionIdTd = Utils.createTd();
     const minionIdSpan = Utils.createSpan("minion-id", pMinionId);
     minionIdTd.appendChild(minionIdSpan);
-    Utils.addToolTip(minionIdSpan, "Entry is missing\nIs the host running and is the salt-minion installed and started?\nUpdate file 'minions.txt' when needed", "bottom-left");
-    minionIdTd.style.color = "red";
+    minionTr.dataset.status = "missing";
     minionTr.appendChild(minionIdTd);
+    KeysPanel._flagMinion(pMinionId, minionTr, pMinionsDict);
 
     const missing = Utils.createTd("status", "missing");
-    minionTr.dataset.status = "missing";
     missing.setAttribute("sorttable_customkey", 5);
     missing.classList.add("missing");
     minionTr.appendChild(missing);
@@ -361,14 +394,14 @@ export class KeysPanel extends Panel {
       }
       return null;
     }, (pClickEvent) => {
-      let cmd = "wheel.key.accept";
+      const cmdArr = ["wheel.key.accept"];
       const status = pMinionTr.dataset.status;
       if (status === "denied") {
-        cmd += " include_denied=true";
+        cmdArr.push("include_denied=", true);
       } else if (status === "rejected") {
-        cmd += " include_rejected=true";
+        cmdArr.push("include_rejected=", true);
       }
-      this.runCommand(pClickEvent, pMinionId, cmd);
+      this.runCommand(pClickEvent, pMinionId, cmdArr);
     });
   }
 
@@ -379,8 +412,8 @@ export class KeysPanel extends Panel {
       }
       return null;
     }, (pClickEvent) => {
-      const cmd = "wheel.key.accept";
-      this.runCommand(pClickEvent, "*", cmd);
+      const cmdArr = ["wheel.key.accept"];
+      this.runCommand(pClickEvent, "*", cmdArr);
     });
   }
 
@@ -394,8 +427,8 @@ export class KeysPanel extends Panel {
       }
       return "Accept all rejected keys...";
     }, (pClickEvent) => {
-      const cmd = "wheel.key.accept include_rejected=true";
-      this.runCommand(pClickEvent, "*", cmd);
+      const cmdArr = ["wheel.key.accept", "include_rejected=", true];
+      this.runCommand(pClickEvent, "*", cmdArr);
     });
   }
 
@@ -409,8 +442,8 @@ export class KeysPanel extends Panel {
       }
       return "Accept all denied keys...";
     }, (pClickEvent) => {
-      const cmd = "wheel.key.accept include_denied=true";
-      this.runCommand(pClickEvent, "*", cmd);
+      const cmdArr = ["wheel.key.accept", "include_denied=", true];
+      this.runCommand(pClickEvent, "*", cmdArr);
     });
   }
 
@@ -424,8 +457,8 @@ export class KeysPanel extends Panel {
       }
       return "Accept all denied+rejected keys...";
     }, (pClickEvent) => {
-      const cmd = "wheel.key.accept include_denied=true include_rejected=true";
-      this.runCommand(pClickEvent, "*", cmd);
+      const cmdArr = ["wheel.key.accept", "include_denied=", true, "include_rejected=", true];
+      this.runCommand(pClickEvent, "*", cmdArr);
     });
   }
 
@@ -437,14 +470,14 @@ export class KeysPanel extends Panel {
       }
       return null;
     }, (pClickEvent) => {
-      let cmd = "wheel.key.accept";
+      const cmdArr = ["wheel.key.accept"];
       const status = pMinionTr.dataset.status;
       if (status === "denied") {
-        cmd += " include_denied=true";
+        cmdArr.push("include_denied=", true);
       } else if (status === "rejected") {
-        cmd += " include_rejected=true";
+        cmdArr.push("include_rejected=", true);
       }
-      this.runCommand(pClickEvent, pMinionId, cmd);
+      this.runCommand(pClickEvent, pMinionId, cmdArr);
     });
   }
 
@@ -456,14 +489,14 @@ export class KeysPanel extends Panel {
       }
       return null;
     }, (pClickEvent) => {
-      let cmd = "wheel.key.reject";
+      const cmdArr = ["wheel.key.reject"];
       const status = pMinionTr.dataset.status;
       if (status === "accepted") {
-        cmd += " include_accepted=true";
+        cmdArr.push("include_accepted=", true);
       } else if (status === "denied") {
-        cmd += " include_denied=true";
+        cmdArr.push("include_denied=", true);
       }
-      this.runCommand(pClickEvent, pMinionId, cmd);
+      this.runCommand(pClickEvent, pMinionId, cmdArr);
     });
   }
 
@@ -474,8 +507,8 @@ export class KeysPanel extends Panel {
       }
       return null;
     }, (pClickEvent) => {
-      const cmd = "wheel.key.reject";
-      this.runCommand(pClickEvent, "*", cmd);
+      const cmdArr = ["wheel.key.reject"];
+      this.runCommand(pClickEvent, "*", cmdArr);
     });
   }
 
@@ -489,8 +522,8 @@ export class KeysPanel extends Panel {
       }
       return "Reject all accepted keys...";
     }, (pClickEvent) => {
-      const cmd = "wheel.key.reject include_accepted=true";
-      this.runCommand(pClickEvent, "*", cmd);
+      const cmdArr = ["wheel.key.reject", "include_accepted=", true];
+      this.runCommand(pClickEvent, "*", cmdArr);
     });
   }
 
@@ -504,8 +537,8 @@ export class KeysPanel extends Panel {
       }
       return "Reject all denied keys...";
     }, (pClickEvent) => {
-      const cmd = "wheel.key.reject include_denied=true";
-      this.runCommand(pClickEvent, "*", cmd);
+      const cmdArr = ["wheel.key.reject", "include_denied=", true];
+      this.runCommand(pClickEvent, "*", cmdArr);
     });
   }
 
@@ -519,8 +552,8 @@ export class KeysPanel extends Panel {
       }
       return "Reject all accepted+denied keys...";
     }, (pClickEvent) => {
-      const cmd = "wheel.key.reject include_accepted=true include_denied=true";
-      this.runCommand(pClickEvent, "*", cmd);
+      const cmdArr = ["wheel.key.reject", "include_accepted=", true, "include_denied=", true];
+      this.runCommand(pClickEvent, "*", cmdArr);
     });
   }
 
@@ -532,20 +565,20 @@ export class KeysPanel extends Panel {
       }
       return null;
     }, (pClickEvent) => {
-      const cmd = "wheel.key.delete";
-      this.runCommand(pClickEvent, pMinionId, cmd);
+      const cmdArr = ["wheel.key.delete"];
+      this.runCommand(pClickEvent, pMinionId, cmdArr);
     });
   }
 
-  _addPanelMenuItemWheelKeyDeleteAllUnaccepted () {
+  _addPanelMenuItemWheelKeyDeleteAll () {
     this.panelMenu.addMenuItem(() => {
       if (KeysPanel.cntAccepted > 0 || KeysPanel.cntUnaccepted > 0 || KeysPanel.cntRejected > 0 || KeysPanel.cntDenied > 0) {
         return "Delete all keys...";
       }
       return null;
     }, (pClickEvent) => {
-      const cmd = "wheel.key.delete";
-      this.runCommand(pClickEvent, "*", cmd);
+      const cmdArr = ["wheel.key.delete"];
+      this.runCommand(pClickEvent, "*", cmdArr);
     });
   }
 
@@ -567,6 +600,7 @@ export class KeysPanel extends Panel {
         if (tr.dataset.status !== "accepted") {
           tr.dataset.status = "accepted";
           statusTd.innerText = "accepted";
+          KeysPanel._flagMinion(pData.id, tr, minionsDict);
         }
       } else if (pData.act === "reject") {
         statusTd.className = "status";
@@ -574,6 +608,7 @@ export class KeysPanel extends Panel {
         if (tr.dataset.status !== "rejected") {
           tr.dataset.status = "rejected";
           statusTd.innerText = "rejected";
+          KeysPanel._flagMinion(pData.id, tr, minionsDict);
         }
       } else if (pData.act === "pend") {
         statusTd.className = "status";
@@ -581,12 +616,13 @@ export class KeysPanel extends Panel {
         if (tr.dataset.status !== "unaccepted") {
           tr.dataset.status = "unaccepted";
           statusTd.innerText = "unaccepted";
+          KeysPanel._flagMinion(pData.id, tr, minionsDict);
         }
       } else if (pData.act === "delete") {
         // "-1" due to the <tr> for the header that is inside <thead>
         tr.parentNode.deleteRow(tr.rowIndex - 1);
         if (pData.id in minionsDict) {
-          this._addMissingMinion(pData.id);
+          this._addMissingMinion(pData.id, minionsDict);
         }
       } else {
         // unknown status
@@ -633,8 +669,11 @@ export class KeysPanel extends Panel {
     if (!tr2) {
       return;
     }
-    // at this stage, the field is still classed "os" instead of "fingerprint"
-    const fingerprintSpan = tr2.querySelector("td.os");
+    let fingerprintSpan = tr2.querySelector("td.fingerprint");
+    if (!fingerprintSpan) {
+      // on startup, the field is still classed "os" instead of "fingerprint"
+      fingerprintSpan = tr2.querySelector("td.os");
+    }
     if (!tr2.dataset.fingerprintKnown) {
       fingerprintSpan.innerText = "(refresh page for fingerprint)";
       const wheelKeyFingerPromise = this.api.getWheelKeyFinger(pData.id);

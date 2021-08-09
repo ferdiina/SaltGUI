@@ -3,6 +3,7 @@
 import {Character} from "../Character.js";
 import {OutputYaml} from "../output/OutputYaml.js";
 import {Panel} from "./Panel.js";
+import {Router} from "../Router.js";
 import {Utils} from "../Utils.js";
 
 export class OptionsPanel extends Panel {
@@ -12,7 +13,12 @@ export class OptionsPanel extends Panel {
 
     this.addTitle("Options");
     // this.addSearchButton();
-    this.addHelpButton("Names 'session_*' show the values from the login session\nNames 'saltgui_*' show the values from the master file '/etc/salt/master'\nOther names are regular variables from the master file\nChanges made in this screen are valid for this session ONLY");
+    this.addHelpButton([
+      "Names 'session_*' show the values from the login session",
+      "Names 'saltgui_*' show the values from the master file '/etc/salt/master'",
+      "Other names are regular variables from the master file",
+      "Changes made in this screen are valid for this session ONLY"
+    ]);
     this.addTable(["Name", "Value"]);
 
     this.options = [
@@ -162,6 +168,14 @@ export class OptionsPanel extends Panel {
     return pSessionExpire + "\n" + expireStr + durationStr + expiresInStr;
   }
 
+  onHide () {
+    if (this.showExpiresTimer) {
+      // stop the timer when noone is looking
+      clearInterval(this.showExpiresTimer);
+      this.showExpiresTimer = null;
+    }
+  }
+
   onShow () {
     // build the controls for all options
     for (const option of this.options) {
@@ -192,6 +206,8 @@ export class OptionsPanel extends Panel {
       } else {
         value = category + "[" + name + "]";
       }
+
+      const origValue = value;
       if (category === "session" && name === "start") {
         value = OptionsPanel._enhanceSessionStart(value);
       } else if (category === "session" && name === "expire") {
@@ -204,6 +220,13 @@ export class OptionsPanel extends Panel {
         td.innerText = value;
       } else {
         td.innerText = this._parseAndFormat(name, value);
+      }
+
+      if (category === "session" && name === "expire") {
+        this.showExpiresTimer = setInterval(() => {
+          // just redo the whole text-block
+          td.innerText = OptionsPanel._enhanceSessionExpire(sessionStart, origValue);
+        }, 1000);
       }
 
       // some rows only display values, skip these
@@ -308,6 +331,9 @@ export class OptionsPanel extends Panel {
     const outputFormatsTd = this.div.querySelector("#option-output-formats-value");
     outputFormatsTd.innerText = value;
     Utils.setStorageItem("session", "output_formats", "\"" + value + "\"");
+    // refresh the right-hand panel based on the new option value
+    Router.currentPage.stats.clearTable();
+    Router.currentPage.stats.onShow();
   }
 
   _newDatetimeFractionDigits () {

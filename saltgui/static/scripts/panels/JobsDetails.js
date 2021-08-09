@@ -20,6 +20,11 @@ export class JobsDetailsPanel extends JobsPanel {
     this._addPanelMenuItemShowAll();
     this.addSearchButton();
     this.addPlayPauseButton("play");
+    this.addHelpButton([
+      "Entries for jobs that are primarily used by SaltGUI are normally hidden.",
+      "It is possible to define exceptions on that, and also to define additions to that.",
+      "See README.md for more details."
+    ]);
     this.addTable(["JID", "Target", "Function", "Start Time", "-menu-", "Status", "Details"], "data-list-jobs");
     this.setTableSortable("JID", "desc");
     this.setTableClickable();
@@ -256,12 +261,24 @@ export class JobsDetailsPanel extends JobsPanel {
       detailsHTML += "</span>";
     }
 
+    let refreshVisible = true;
+    if (keyCount === pData.Minions.length) {
+      // we have results for each minion
+      refreshVisible = false;
+    }
+    const statusSpan = jobTr.querySelector("td span.job-status");
+    if (statusSpan.innerText === "done") {
+      // the system said that the job was done
+      // but still maybe some results are missing
+      // but these are not underway
+      refreshVisible = false;
+    }
+    const span = Utils.createJobStatusSpan(pJobId, refreshVisible);
     detailsSpan.innerText = "";
-    const span = Utils.createJobStatusSpan(pJobId, keyCount !== pData.Minions.length);
     detailsSpan.appendChild(span);
-    const statusSpan = Utils.createSpan();
-    statusSpan.innerHTML = detailsHTML;
-    detailsSpan.appendChild(statusSpan);
+    const details2Span = Utils.createSpan();
+    details2Span.innerHTML = detailsHTML;
+    detailsSpan.appendChild(details2Span);
     detailsSpan.classList.remove("no-job-details");
     Utils.addToolTip(detailsSpan, "Click to refresh");
   }

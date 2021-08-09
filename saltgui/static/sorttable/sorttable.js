@@ -20,25 +20,25 @@ import {Character} from "../scripts/Character.js";
 export class SortTable {
 
   static makeSortable (table) {
-    if (table.getElementsByTagName('thead').length == 0) {
+    if (table.getElementsByTagName('thead').length === 0) {
       // table doesn't have a tHead. Since it should have, create one and
       // put the first table row in it.
-      the = document.createElement('thead');
+      const the = document.createElement('thead');
       the.appendChild(table.rows[0]);
       table.insertBefore(the,table.firstChild);
     }
     // Safari doesn't support table.tHead, sigh
-    if (table.tHead == null) table.tHead = table.getElementsByTagName('thead')[0];
+    if (table.tHead === null) table.tHead = table.getElementsByTagName('thead')[0];
 
-    if (table.tHead.rows.length != 1) return; // can't cope with two header rows
+    if (table.tHead.rows.length !== 1) return; // can't cope with two header rows
 
     // work through each column and calculate its type
     const headrow = table.tHead.rows[0].cells;
-    for (var i=0; i<headrow.length; i++) {
+    for (let i=0; i<headrow.length; i++) {
       // manually override the type with a sorttable_type attribute
       if (!headrow[i].classList.contains("sorttable_nosort")) { // skip this col
         const mtch = headrow[i].className.match(/\bsorttable_([a-z0-9]+)\b/);
-        if (mtch) { override = mtch[1]; }
+        if (mtch) { const override = mtch[1]; }
 	      headrow[i].sorttable_sortfunction = SortTable.sort_alpha;
 	      // make it clickable to sort
 	      headrow[i].sorttable_columnindex = i;
@@ -53,7 +53,7 @@ export class SortTable {
     let prev_sorttable_columnindex = -1;
     const theadrow = clickElement.parentNode;
     for(const cell of theadrow.childNodes) {
-      if (cell.nodeType == 1) { // an element
+      if (cell.nodeType === 1) { // an element
         if(cell.className.includes("sorttable_sorted")) prev_sorttable_columnindex = cell.sorttable_columnindex;
         cell.classList.remove("sorttable_sorted_reverse");
         cell.classList.remove("sorttable_sorted");
@@ -92,7 +92,7 @@ export class SortTable {
     const row_array = [];
     const col = clickElement.sorttable_columnindex;
     const rows = clickElement.sorttable_tbody.rows;
-    for (var j=0; j<rows.length; j++) {
+    for (let j=0; j<rows.length; j++) {
       row_array[row_array.length] = [SortTable.getInnerText(rows[j].cells[col]), rows[j]];
     }
     /* If you want a stable sort, uncomment the following line */
@@ -102,7 +102,7 @@ export class SortTable {
     if(reverse) row_array.reverse();
 
     const tb = clickElement.sorttable_tbody;
-    for (var j=0; j<row_array.length; j++) {
+    for (let j=0; j<row_array.length; j++) {
       tb.appendChild(row_array[j][1]);
     }
   }
@@ -116,33 +116,34 @@ export class SortTable {
 
     if (!node) return "";
 
-    const hasInputs = (typeof node.getElementsByTagName == 'function') &&
+    const hasInputs = (typeof node.getElementsByTagName === 'function') &&
                  node.getElementsByTagName('input').length;
 
-    if (node.getAttribute("sorttable_customkey") != null) {
+    if (node.getAttribute("sorttable_customkey") !== null) {
       return node.getAttribute("sorttable_customkey");
     }
-    else if (typeof node.textContent != 'undefined' && !hasInputs) {
+    else if (typeof node.textContent !== 'undefined' && !hasInputs) {
       return node.textContent.replace(/^\s+|\s+$/g, '');
     }
-    else if (typeof node.innerText != 'undefined' && !hasInputs) {
+    else if (typeof node.innerText !== 'undefined' && !hasInputs) {
       return node.innerText.replace(/^\s+|\s+$/g, '');
     }
-    else if (typeof node.text != 'undefined' && !hasInputs) {
+    else if (typeof node.text !== 'undefined' && !hasInputs) {
       return node.text.replace(/^\s+|\s+$/g, '');
     }
     else {
       switch (node.nodeType) {
         case 3:
-          if (node.nodeName.toLowerCase() == 'input') {
+          if (node.nodeName.toLowerCase() === 'input') {
             return node.value.replace(/^\s+|\s+$/g, '');
           }
+          return node.nodeValue.replace(/^\s+|\s+$/g, '');
         case 4:
           return node.nodeValue.replace(/^\s+|\s+$/g, '');
         case 1:
         case 11:
           var innerText = '';
-          for (var i = 0; i < node.childNodes.length; i++) {
+          for (let i = 0; i < node.childNodes.length; i++) {
             innerText += SortTable.getInnerText(node.childNodes[i]);
           }
           return innerText.replace(/^\s+|\s+$/g, '');
@@ -155,10 +156,10 @@ export class SortTable {
   static reverse (tbody) {
     // reverse the rows in a tbody
     const newrows = [];
-    for (var i=0; i<tbody.rows.length; i++) {
+    for (let i=0; i<tbody.rows.length; i++) {
       newrows[newrows.length] = tbody.rows[i];
     }
-    for (var i=newrows.length-1; i>=0; i--) {
+    for (let i=newrows.length-1; i>=0; i--) {
       tbody.appendChild(newrows[i]);
     }
   }
@@ -167,7 +168,7 @@ export class SortTable {
      each sort function takes two parameters, a and b
      you are comparing a[0] and b[0] */
   static sort_alpha (a,b) {
-    if (a[0]==b[0]) return 0;
+    if (a[0]===b[0]) return 0;
     if (a[0]<b[0]) return -1;
     return 1;
   }
@@ -182,9 +183,9 @@ export class SortTable {
 
     while(swap) {
         swap = false;
-        for(var i = b; i < t; ++i) {
+        for(let i = b; i < t; ++i) {
             if ( comp_func(list[i], list[i+1]) > 0 ) {
-                var q = list[i]; list[i] = list[i+1]; list[i+1] = q;
+                const q = list[i]; list[i] = list[i+1]; list[i+1] = q;
                 swap = true;
             }
         } // for
@@ -192,9 +193,9 @@ export class SortTable {
 
         if (!swap) break;
 
-        for(var i = t; i > b; --i) {
+        for(let i = t; i > b; --i) {
             if ( comp_func(list[i], list[i-1]) < 0 ) {
-                var q = list[i]; list[i] = list[i-1]; list[i-1] = q;
+                const q = list[i]; list[i] = list[i-1]; list[i-1] = q;
                 swap = true;
             }
         } // for

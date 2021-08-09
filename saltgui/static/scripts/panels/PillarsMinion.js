@@ -1,4 +1,4 @@
-/* global console document */
+/* global document */
 
 import {Character} from "../Character.js";
 import {Output} from "../output/Output.js";
@@ -16,6 +16,11 @@ export class PillarsMinionPanel extends Panel {
     this._addPanelMenuItemSaltUtilRefreshPillar();
     this.addSearchButton();
     this.addCloseButton();
+    this.addHelpButton([
+      "The content of specific well-known pillar values can be made visible",
+      "automatically by configuring their name in the server-side configuration file.",
+      "See README.md for more details."
+    ]);
     this.addTable(["Name", "Value"]);
     this.setTableSortable("Name", "asc");
     this.addMsg();
@@ -64,7 +69,7 @@ export class PillarsMinionPanel extends Panel {
         publicPillars[i] = new RegExp(publicPillars[i]);
       } catch (err) {
         // most likely a syntax error in the RE
-        console.error("error in regexp saltgui_public_pillars[" + i + "]=" + OutputYaml.formatYAML(publicPillars[i]) + " --> " + err.name + ": " + err.message);
+        Utils.error("error in regexp saltgui_public_pillars[" + i + "]=" + OutputYaml.formatYAML(publicPillars[i]) + " --> " + err.name + ": " + err.message);
         publicPillars[i] = null;
       }
     }
@@ -129,7 +134,7 @@ export class PillarsMinionPanel extends Panel {
   _addPanelMenuItemSaltUtilRefreshPillar () {
     this.panelMenu.addMenuItem("Refresh pillar...", (pClickEvent) => {
       const minionId = decodeURIComponent(Utils.getQueryParam("minionid"));
-      this.runCommand(pClickEvent, minionId, "saltutil.refresh_pillar");
+      this.runCommand(pClickEvent, minionId, ["saltutil.refresh_pillar"]);
     });
   }
 }

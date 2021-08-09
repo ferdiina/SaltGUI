@@ -26,10 +26,10 @@ export class SchedulesPanel extends Panel {
       localScheduleListPromise.then((pLocalScheduleListData) => {
         this.updateMinions(pLocalScheduleListData);
         return true;
-      }, (pLocalBeaconsListMsg) => {
+      }, (pLocalScheduleListMsg) => {
         const localScheduleListData = {"return": [{}]};
         for (const minionId of pWheelKeyListAllData.return[0].data.return.minions) {
-          localScheduleListData.return[0][minionId] = JSON.stringify(pLocalBeaconsListMsg);
+          localScheduleListData.return[0][minionId] = JSON.stringify(pLocalScheduleListMsg);
         }
         this.updateMinions(localScheduleListData);
         return false;
@@ -95,6 +95,8 @@ export class SchedulesPanel extends Panel {
         this.router.goTo("schedules-minion", {"minionid": minionId});
       });
     }
+
+    Utils.setStorageItem("session", "minions_pre_length", keys.minions_pre.length);
 
     const txt = Utils.txtZeroOneMany(minionIds.length,
       "No minions", "{0} minion", "{0} minions");

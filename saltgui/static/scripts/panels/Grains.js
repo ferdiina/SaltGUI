@@ -13,6 +13,11 @@ export class GrainsPanel extends Panel {
     this.addTitle("Grains");
     this.addSearchButton();
     // TODO extra columns
+    this.addHelpButton([
+      "The content of specific well-known grains can be made visible in",
+      "columns by configuring their name in the server-side configuration file.",
+      "See README.md for more details."
+    ]);
     this.addTable(["Minion", "Status", "Salt version", "OS version", "Grains", "-menu-"]);
     this.setTableClickable();
 
@@ -85,6 +90,8 @@ export class GrainsPanel extends Panel {
         this.router.goTo("grains-minion", {"minionid": minionId});
       });
     }
+
+    Utils.setStorageItem("session", "minions_pre_length", keys.minions_pre.length);
 
     const txt = Utils.txtZeroOneMany(minionIds.length,
       "No minions", "{0} minion", "{0} minions");
